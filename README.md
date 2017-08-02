@@ -9,6 +9,7 @@
 
 ### Running the assistant
 The default mode of the assistant selects a random study from the portal and searches other studies on the portal for matching attributes.
+
 Default example:
 ```bash
 python new_study_assistant.py
@@ -25,7 +26,6 @@ python new_study_assistant.py --study_to_drop='acyc_mda_2015' --new_study_path='
 ```
  * Path to raw study data file that you want to analyze. Currently the code assumes that the file only contains attribute names in the header.  If the file contains a multi-line header the program will probably crash.
 
-
 ```bash
 --study_to_drop
 ```
@@ -37,7 +37,9 @@ python new_study_assistant.py --study_to_drop='acyc_mda_2015' --new_study_path='
  * Use this option if you want to run the analysis on a study that is already in the cBioPortal
 
 ### Output
-Running the script results in several files:
+Similar attributes that are detected in the test study are printed to the screen.  The prefix "NEW_STUDY_" is added to each attribute in the test study to distinguish those attributes from those already on cBioPortal.
+
+Running the script also results in several image files:
  * dendrogram.png - An image showing the dendrogram obtained for similarity detection based on attribute values.
  * n_attribute_distribution.png - An image showing the number of attributes contained in the test study relative to all studies on the cBioPortal.
  * n_common_attribute_distribution.png - An image showing the number of attributes in common with studies on the cBioPortal.
