@@ -13,9 +13,6 @@ import math
 from scipy.spatial.distance import pdist, squareform
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 
-plt.rcParams['figure.figsize'] = (10.0, 8.0)
-plt.rcParams.update({'font.size':20})
-
 #define some functions
 #-----------------------------------
 #downloads main study information from the portal
@@ -177,6 +174,8 @@ def output_results(exact_matches, possible_matches, non_matching_attributes):
         print attribute
         
 def plot_attribute_distribution(cBioPortal_data, new_study_data):
+    plt.rcParams['figure.figsize'] = (10.0, 8.0)
+    plt.rcParams.update({'font.size':20})
     plt.figure()
     ax=seaborn.distplot(cBioPortal_data.sum(axis=1), kde=False)
     ax.set(ylabel='number of studies', xlabel='attributes in study')
@@ -186,6 +185,8 @@ def plot_attribute_distribution(cBioPortal_data, new_study_data):
 
 def plot_unique_and_common_attribute_distributions(cBioPortal_data, non_matching_attributes):
     #unique attributes plot
+    plt.rcParams['figure.figsize'] = (10.0, 8.0)
+    plt.rcParams.update({'font.size':20})
     plt.figure()
     unique_attributes_cBio_studies = cBioPortal_data.T[(cBioPortal_data.sum(axis=0)==1).values].sum(axis=0)
     ax=seaborn.distplot(unique_attributes_cBio_studies, kde=False)
@@ -195,6 +196,8 @@ def plot_unique_and_common_attribute_distributions(cBioPortal_data, non_matching
     plt.close()
     
     #common attributes plot
+    plt.rcParams['figure.figsize'] = (10.0, 8.0)
+    plt.rcParams.update({'font.size':20})
     plt.figure()
     common_attributes = cBioPortal_data.sum(axis=1) - unique_attributes_cBio_studies
     ax=seaborn.distplot(common_attributes, kde=False)
