@@ -1,0 +1,38 @@
+================================================
+attributes with exact matches:
+================================================
+AGE is present in 122 other studies
+HISTOLOGY is present in 11 other studies
+MYB_NFIB_REARRANGEMENT is present in 1 other studies
+SEX is present in 36 other studies
+
+================================================
+attributes with possible matches:
+================================================
+No similar matches detected.
+
+================================================
+attributes with NO matches:
+================================================
+FISH
+FUSION_OTHER
+MYB/MYBL1-FUSION
+MYB_MYBL1_FUSION_METHOD
+OTHER NFIB FUSION
+PNI
+SITE
+SIZE(CM)
+
+================================================
+possible attribute matches based on data values
+================================================
+================================================
+possible matches for: NEW_STUDY_SEX
+--------------------
+possible match: GENDER
+possible match: SEX
+================================================
+possible matches for: NEW_STUDY_HISTOLOGY
+--------------------
+possible match: KATABI_PATH
+possible match: OFFICIAL_PATH

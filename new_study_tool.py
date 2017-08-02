@@ -339,7 +339,7 @@ study_data_combined = study_attributes_to_df(study_attributes)
 
 
 #choose a study to serve as a "new" study
-if random_study or specfic_study is not None:
+if random_study or specific_study is not None:
     if random_study:
         test_study = random.choice(study_names)
     else:
