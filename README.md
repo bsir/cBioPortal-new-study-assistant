@@ -37,7 +37,7 @@ python new_study_assistant.py --study_to_drop='acyc_mda_2015' --new_study_path='
  * Use this option if you want to run the analysis on a study that is already in the cBioPortal
 
 ### Output
-Similar attributes that are detected in the test study are printed to the screen.  The prefix "NEW_STUDY_" is added to each attribute in the test study to distinguish those attributes from those already on cBioPortal.
+Similar attributes that are detected in the test study are printed to the screen.  The prefix "NEW_STUDY_" is added to each attribute in the test study to distinguish those attributes from those already on cBioPortal.  The text output from the script can be redirected to a file using: > FILENAME
 
 Running the script also results in several image files:
  * dendrogram.png - An image showing the dendrogram obtained for similarity detection based on attribute values.
