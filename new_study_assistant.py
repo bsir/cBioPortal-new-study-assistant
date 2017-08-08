@@ -72,7 +72,7 @@ def study_attributes_to_df(study_attribute_data):
     #transform data into boolean table of studies/attributes
     #entries in the table are 1 if a study contains an attribute and 0 otherwise
     study_attribute = []
-    for i in study_attributes:
+    for i in study_attribute_data:
         for j in i[1]:
             study_attribute.append((i[0],j))
 
@@ -95,7 +95,7 @@ def find_attribute_name_matches(cBioPortal_attributes, new_attributes, cutoff=0.
     lev_dist = np.zeros([len(all_col_names), len(new_attributes)])
     for i in range(len(all_col_names)):
         for j in range(len(new_attributes)):
-            lev_dist[i,j]=Levenshtein.ratio(all_col_names[i].upper(), new_attributes[j].upper())
+            lev_dist[i,j]=Levenshtein.ratio(unicode(all_col_names[i].upper()), unicode(new_attributes[j].upper()))
             
     all_lev_distances = pd.DataFrame(data=lev_dist.T, index=new_attributes, columns=all_col_names)
     matches = pd.DataFrame(data=list(all_lev_distances[all_lev_distances > cutoff].stack().index))
@@ -236,11 +236,20 @@ def process_clinical_data(all_study_clinical_data, study_to_drop=''):
             study_data_attributes = list(study[1])
 
             #get attribute data to filter based on datatype
-            study_api_url = 'http://cbioportal.org/api/studies/' + study[0] + '/clinical-attributes'
-            df = pd.read_json(study_api_url)
-            for attribute in study_data_attributes:
-                if (attribute != u'OTHER_SAMPLE_ID') and (attribute != u'OTHER_PATIENT_ID'):
-                    if df['datatype'][df['clinicalAttributeId']==attribute].values[0] == 'STRING':
+            if api_flag:
+                study_api_url = 'http://cbioportal.org/api/studies/' + study[0] + '/clinical-attributes'
+                df = pd.read_json(study_api_url)
+                for attribute in study_data_attributes:
+                    if not attribute.endswith('_ID'):
+                        if df['datatype'][df['clinicalAttributeId']==attribute].values[0] == 'STRING':
+                            data = set(study[1][attribute])
+                            for d in data:
+                                if not is_number(d):
+                                    attribute_data.append((attribute.upper(), d.upper()))
+            
+            else:
+                for attribute in study_data_attributes:
+                    if (not unicode(attribute).endswith("ID")) and ("FILE_NAME" not in attribute)  and ("DATE" not in attribute):
                         data = set(study[1][attribute])
                         for d in data:
                             if not is_number(d):
@@ -319,24 +328,69 @@ def output_cluster_matches(all_clusters):
                                 print "--------------------"
                             print "possible match: " + match
 
+def find_data_files(basedir):
+    import os
+    import os.path
+
+    file_list = []
+    for dirpath, dirnames, filenames in os.walk(basedir):
+        for filename in [f for f in filenames if ((("clinical" in f) and ("data" in f)) and (f.endswith(".txt")))]:
+            file_list.append(os.path.join(dirpath, filename))
+    return file_list
+
+def load_data_from_files(file_list, basedir):
+    study_data = []
+    attribute_data = []
+    for clinical_file in file_list:
+        #load in individual data from files and append to a list
+        df = pd.read_table(clinical_file, skiprows=0)
+        if (list(df)[0]!='SAMPLE_ID' and list(df)[0]!='PATIENT_ID'):
+            rows_to_skip=df[(df[df.columns[0]]=="SAMPLE_ID") | (df[df.columns[0]]=="PATIENT_ID") | (df[df.columns[0]]=="OTHER_PATIENT_ID") | (df[df.columns[0]]=="OTHER_SAMPLE_ID")].index[0]+1
+            df = pd.read_table(clinical_file, skiprows=rows_to_skip)
+        df.columns = map(str.upper, df.columns)
+        col_names = list(df)
+        tcga_provisional_flag = False
+        study_name = clinical_file.split(basedir+'/')[1].split('/')[0]
+        if clinical_file.split(basedir+'/')[1].split('/')[1] == 'tcga':
+            study_name = study_name + '_tcga'
+        if study_name == '':
+            study_name = clinical_file.split(basedir+'/')[1].split('/')[1]
+            if clinical_file.split(basedir+'/')[1].split('/')[2] == 'tcga':
+                study_name = study_name + '_tcga'
+        study_data.append((study_name, col_names))
+        attribute_data.append((study_name, df))
+    return study_data, attribute_data
+
 #values that should be read in
 # Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("--new_study_path", help="path to new study data")
 parser.add_argument("--study_to_drop", help="if study being tested is already on cBioPortal it may be helpful to drop that study from the analysis")
 parser.add_argument("--specific_study", help="name of specific study on the portal to test")
+parser.add_argument("--datahub_path", help="directory where the datahub is located")
 args = parser.parse_args()
 
 new_study_path = args.new_study_path
 study_to_drop = args.study_to_drop
 specific_study = args.specific_study
+datahub_path = args.datahub_path
 random_study=False
 if new_study_path is None:
     random_study = True
 
+api_flag=True
+if datahub_path is not None:
+    api_flag = False
+
+
 #main part of the script below
-all_cBioPortalStudies = get_all_study_info()
-studies, study_attributes = get_attribute_data(all_cBioPortalStudies)
+#main function
+if api_flag:
+    all_cBioPortalStudies = get_all_study_info()
+    studies, study_attributes = get_attribute_data(all_cBioPortalStudies)
+else:
+    list_of_files = find_data_files(datahub_path)
+    study_attributes, attribute_value_data = load_data_from_files(list_of_files, datahub_path)
 study_names = get_study_names(study_attributes)
 study_data_combined = study_attributes_to_df(study_attributes)
 
@@ -352,8 +406,13 @@ if random_study or specific_study is not None:
     test_study_data, test_study_clin_attributes = get_attribute_data([test_study])
     test_study_attribute_data = test_study_data[0][1]
     test_study_attribute_names = test_study_attribute_data['clinicalAttributeId'].values
-    test_study_clinical_attribute_values = get_clinical_data_values([test_study], attribute_type="PATIENT")
-    new_study_clinical_attribute_values = process_new_study_data(test_study_clinical_attribute_values[0][1])
+    test_study_patient_attribute_values = get_clinical_data_values([test_study], attribute_type="PATIENT")
+    test_study_sample_attribute_values = get_clinical_data_values([test_study], attribute_type="SAMPLE")
+    processed_test_study_patient_attribute_values = process_new_study_data(test_study_patient_attribute_values[0][1])
+    processed_test_study_sample_attribute_values = process_new_study_data(test_study_sample_attribute_values[0][1])
+    new_study_clinical_attribute_values = pd.concat([processed_test_study_patient_attribute_values,
+                                                     processed_test_study_sample_attribute_values],
+                                                     axis=0).fillna(value=0)
 
 #otherwise read in data from a new study
 else:
@@ -369,9 +428,15 @@ non_matching_attributes = np.setdiff1d(test_study_attribute_names, list(study_da
 possible_matches = find_attribute_name_matches(study_data_combined, non_matching_attributes)
 
 #check matching attributes based on data values
-api_clinical_data = get_clinical_data_values(all_cBioPortalStudies, attribute_type="PATIENT")
-cBioPortal_clinical_data = process_clinical_data(api_clinical_data, study_to_drop)
-combined_attribute_values = pd.concat([cBioPortal_clinical_data, new_study_clinical_attribute_values], axis=0).fillna(value=0)
+if api_flag:
+    patient_data = get_clinical_data_values(all_cBioPortalStudies, attribute_type="PATIENT")
+    patient_data_processed = process_clinical_data(patient_data, study_to_drop)
+    sample_data = get_clinical_data_values(all_cBioPortalStudies, attribute_type="SAMPLE")
+    sample_data_processed = process_clinical_data(sample_data, study_to_drop)
+    combined_PS_attribute_data = pd.concat([patient_data_processed, sample_data_processed], axis=0).fillna(value=0)
+else:
+    combined_PS_attribute_data = process_clinical_data(attribute_value_data, study_to_drop)
+combined_attribute_values = pd.concat([combined_PS_attribute_data, new_study_clinical_attribute_values], axis=0).fillna(value=0)
 
 #get clusters and plot dendrogram
 clusters = get_clusters(combined_attribute_values)
