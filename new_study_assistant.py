@@ -438,16 +438,21 @@ specific_study = args.specific_study
 datahub_path = args.datahub_path
 output_pdf = args.output_pdf
 random_study=False
-if new_study_path is None:
+if (new_study_path is None) and (specific_study is None):
     random_study = True
 
 api_flag=True
 if datahub_path is not None:
     api_flag = False
+    print "Using cBioPortal data from local datahub: " + datahub_path
+else:
+    print "cBioPortal data will be obtained via API"
 
 latex_flag=False
-if output_pdf is not None:
+if output_pdf:
     latex_flag=True
+    print "PDF file will be output"
+
 
 #main part of the script below
 #main function
@@ -467,6 +472,7 @@ if random_study or specific_study is not None:
         test_study = random.choice(study_names)
     else:
         test_study = specific_study
+    print "Study being analyzed: " + test_study
     study_to_drop = test_study
     study_data_combined = drop_study(test_study, study_data_combined)
     test_study_data, test_study_clin_attributes = get_attribute_data([test_study])
