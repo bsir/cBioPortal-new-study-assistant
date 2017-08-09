@@ -394,6 +394,10 @@ def generate_latex_report(match_table,):
         with doc.create(Subsection('Attribute matches')):
             with doc.create(Tabular('|c|c|')) as table:
                 table.add_hline()
+                table.add_row(list(match_table))
+                table.add_hline()
+                table.add_hline()
+
                 for row in match_table.index:
                     table.add_row(list(match_table.loc[row,:]))
                     table.add_hline()
@@ -425,12 +429,14 @@ parser.add_argument("--new_study_path", help="path to new study data")
 parser.add_argument("--study_to_drop", help="if study being tested is already on cBioPortal it may be helpful to drop that study from the analysis")
 parser.add_argument("--specific_study", help="name of specific study on the portal to test")
 parser.add_argument("--datahub_path", help="directory where the datahub is located")
+parser.add_argument("--output_pdf", action='store_true', help="flag to output pdf")
 args = parser.parse_args()
 
 new_study_path = args.new_study_path
 study_to_drop = args.study_to_drop
 specific_study = args.specific_study
 datahub_path = args.datahub_path
+output_pdf = args.output_pdf
 random_study=False
 if new_study_path is None:
     random_study = True
@@ -439,6 +445,9 @@ api_flag=True
 if datahub_path is not None:
     api_flag = False
 
+latex_flag=False
+if output_pdf is not None:
+    latex_flag=True
 
 #main part of the script below
 #main function
@@ -518,7 +527,11 @@ all_matches_df = (pd.concat([exact_matches_df, value_matches_df, no_matches_df])
                   .reset_index(drop=True))
 
 #print all_matches_df
-generate_latex_report(all_matches_df)
+if latex_flag:
+    generate_latex_report(all_matches_df)
+else:
+    print all_matches_df
+
 
 #make and save figures
 plot_attribute_distribution(study_data_combined, test_study_attribute_names)
