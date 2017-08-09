@@ -123,7 +123,6 @@ def output_results(exact_matches, possible_matches, non_matching_attributes):
     possible_match_count = 0
     for attribute in non_matching_attributes:
         #print matching attributes
-        #filtered_matches = np.intersect1d(df_test[df_test[0]==attribute][1].values, np.asarray(list(study_data_combined))[(study_data_combined.loc[msk, :].sum()==0).values])
         try:
             filtered_matches = np.setdiff1d(possible_matches[possible_matches[0]==attribute][1].values, exact_matches)
         except:
@@ -133,32 +132,16 @@ def output_results(exact_matches, possible_matches, non_matching_attributes):
             #print attribute in new study along with datatype and patient/sample attribute
             print "================================================"
             print "new study attribute: " + attribute
-            #print "datatype: " + test_study_data[test_study_data['clinicalAttributeId']==attribute]['datatype'].values[0]
-            #print "patient attribute?: " + str(test_study_data[test_study_data['clinicalAttributeId']==attribute]['patientAttribute'].values[0])
             print '---------------------------------------'
+            
             #print similar attributes found in existing studies along with the datatype
             print 'possible matches:'
 
             for matching_attribute in filtered_matches:
-                #make sure match isn't an attribute in the new study
-                #filtered_matches = np.setdiff1d(df_test[df_test[0]==attribute][1].values, exact_matching_attributes)
-                #if filtered_matches.size>0:
                 print matching_attribute + ", which is present in " + str(int(study_data_combined.sum()[matching_attribute])) + " other studies"
-                #studies_with_attribute=study_data_combined[study_data_combined[matching_attribute]>0].index    
                 attribute_dtypes=[]
                 attribute_ps_types=[]
-                #for study in studies_with_attribute:
-                #    study_index=study_names.index(study)
 
-                #    attribute_data=studies[study_index][1]
-                #    attribute_dtype=attribute_data[attribute_data['clinicalAttributeId']==matching_attribute]['datatype']
-                #    attribute_dtypes.append(attribute_dtype.get_values()[0])
-
-                #    attribute_ps_type=attribute_data[attribute_data['clinicalAttributeId']==matching_attribute]['patientAttribute']
-                #    attribute_ps_types.append(sample_or_patient[attribute_ps_type.get_values()[0]])
-
-                #print Counter(attribute_dtypes)
-                #print Counter(attribute_ps_types)
         else:
             no_matches.append(attribute)
 
@@ -361,6 +344,80 @@ def load_data_from_files(file_list, basedir):
         attribute_data.append((study_name, df))
     return study_data, attribute_data
 
+def process_levenshtein_matches(exact_matches, possible_matches, non_matching_attributes):
+    match_pairs = []
+    no_matches = []
+    for attribute in non_matching_attributes:
+        try:
+            filtered_matches = np.setdiff1d(possible_matches[possible_matches[0]==attribute][1].values, exact_matches)
+        except:
+            filtered_matches = np.empty(0)
+        if (filtered_matches.size)>0:
+            for matching_attribute in filtered_matches:
+                match_pairs.append((attribute, matching_attribute))
+        else:
+            no_matches.append(attribute)
+    return match_pairs, no_matches
+
+def process_cluster_matches(all_clusters):
+    match_pairs = []
+    for cluster in all_clusters:
+        if len(cluster)>1:
+            for attribute in cluster:
+                if 'NEW_STUDY_' in attribute:
+                    matches = np.setdiff1d(cluster, attribute)
+                    for match in matches:
+                        if 'NEW_STUDY_' not in match:
+                            match_pairs.append((attribute[10:], match))
+    return match_pairs
+
+def get_unique_attributes(unique_attributes, value_matches):
+    no_matches = []
+    for attribute in unique_attributes:
+        if sum(value_matches['New study attribute']==attribute)==0:
+            no_matches.append(attribute)
+    return no_matches
+
+def generate_latex_report(match_table,):
+    from pylatex import NoEscape, Document, Section, Subsection, Tabular, Math, TikZ, Axis, Plot, Figure, Matrix, Alignat
+    from pylatex.utils import italic
+    import os
+
+    file_directory = ''
+
+    geometry_options = {"tmargin": "1in", "lmargin": "1in", "bmargin": "1in", "rmargin": "1in"}
+    doc = Document(geometry_options=geometry_options)
+
+    with doc.create(Section('cBioPortal new study report')):
+        doc.append('This is an example report')
+
+        with doc.create(Subsection('Attribute matches')):
+            with doc.create(Tabular('|c|c|')) as table:
+                table.add_hline()
+                for row in match_table.index:
+                    table.add_row(list(match_table.loc[row,:]))
+                    table.add_hline()
+
+        doc.append(NoEscape(r'\newpage'))
+
+        with doc.create(Subsection('Number of attribute distributions')):
+            with doc.create(Figure(position='h!')) as n_attributes:
+                n_attributes.add_image(file_directory + 'n_attribute_distribution.png', width=NoEscape(r'0.99\textwidth'))
+                n_attributes.add_caption('Number of attributes')
+
+        #with doc.create(Subsection('Number of unique attributes')):
+            with doc.create(Figure(position='h!')) as n_unique_attributes:
+                n_unique_attributes.add_image(file_directory + 'n_unique_attribute_distribution.png', width=NoEscape(r'0.99\textwidth'))
+                n_unique_attributes.add_caption('Number of unique attributes')
+
+        #with doc.create(Subsection('Number of common attributes')):
+            with doc.create(Figure(position='h!')) as n_common_attributes:
+                n_common_attributes.add_image(file_directory + 'n_common_attribute_distribution.png', width=NoEscape(r'0.99\textwidth'))
+                n_common_attributes.add_caption('Number of common attributes')
+
+    doc.generate_pdf('report', clean_tex=True)
+
+
 #values that should be read in
 # Parse arguments
 parser = argparse.ArgumentParser()
@@ -441,11 +498,27 @@ combined_attribute_values = pd.concat([combined_PS_attribute_data, new_study_cli
 #get clusters and plot dendrogram
 clusters = get_clusters(combined_attribute_values)
 
-#print results
-output_results(exact_matching_attributes, possible_matches, non_matching_attributes)
+#process matches
+processed_name_matches, no_name_matches = process_levenshtein_matches(exact_matching_attributes, 
+                                                                      possible_matches,
+                                                                      non_matching_attributes)
+processed_value_matches = process_cluster_matches(clusters)
 
-#print data value clustering matches
-output_cluster_matches(clusters)
+#combine matches into one dataframe
+exact_matches_df = pd.DataFrame(np.column_stack([exact_matching_attributes, exact_matching_attributes]), 
+                                columns=['New study attribute', 'Possible matches'])
+name_matches_df = pd.DataFrame(processed_name_matches, columns=['New study attribute', 'Possible matches'])
+value_matches_df = pd.DataFrame(processed_value_matches, columns=['New study attribute', 'Possible matches'])
+no_name_or_value_matches = get_unique_attributes(no_name_matches, value_matches_df)
+no_matches_df = pd.DataFrame(np.asarray(([no_name_or_value_matches, ['No matches found']*len(no_name_or_value_matches)])).T,
+                             columns=['New study attribute', 'Possible matches'])
+all_matches_df = (pd.concat([exact_matches_df, value_matches_df, no_matches_df])
+                  .drop_duplicates()
+                  .sort_values('New study attribute',axis=0)
+                  .reset_index(drop=True))
+
+#print all_matches_df
+generate_latex_report(all_matches_df)
 
 #make and save figures
 plot_attribute_distribution(study_data_combined, test_study_attribute_names)
