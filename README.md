@@ -1,5 +1,8 @@
 ## cBioPortal-new-study-assistant
 
+### Introduction
+	This tool is designed to aid in curating new study clinical data into cBioPortal.  The tool reads clinical data from the new study and compares the data to existing studies in the cBioPortal database to find attributes which match those in existing studies.  The ultimate goal of the tool is to aid the curator in normalizing the new study data relative to cBioPortal studies.
+
 ### Required python packages
  * NumPy
  * SciPy
@@ -9,12 +12,14 @@
  * Pylatex (required only for the '--output_pdf' option)
 
 ### Running the script
-The default mode of the script selects a random study from the portal and searches other studies on the portal for matching attributes.  The current version of the script typically takes a few minutes to run and depends on internet access to download data from cBioPortal.
+The default mode of the script selects a random study from the portal and searches other studies on the portal for matching attributes.  The current version of the script typically takes a few minutes to run and depends on internet access to download data from cBioPortal.  Alternatively, one can also clone the datahub repository and run the tool on that local data.
 
 Default example:
 ```bash
 python new_study_assistant.py
 ```
+
+A more practical mode of the tool is to test raw study data from a new study against the existing cBioPortal data.  Currently the tool assumes that the raw study data only contains one line in the header.  Example raw data from the acyc_mda_2015 study is provided on this repository for reference.
 
 Example using acyc_mda_2015 raw data (this data is provided in the acyc_mda_2015 folder in this repository):
 ```bash

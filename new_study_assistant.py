@@ -101,60 +101,6 @@ def find_attribute_name_matches(cBioPortal_attributes, new_attributes, cutoff=0.
     matches = pd.DataFrame(data=list(all_lev_distances[all_lev_distances > cutoff].stack().index))
             
     return matches
-
-def output_results(exact_matches, possible_matches, non_matching_attributes):
-    sample_or_patient = {True:"patient", False:"sample"}
-
-    print "================================================" 
-    print "attributes with exact matches:"
-    print "================================================"
-
-    for attribute in exact_matches:
-        print attribute + " is present in " + str(int(study_data_combined.sum()[attribute])) + " other studies"
-    
-    ############################################################
-    
-    print ""
-    print "================================================"
-    print "attributes with possible matches:"
-    print "================================================"
-
-    no_matches = []
-    possible_match_count = 0
-    for attribute in non_matching_attributes:
-        #print matching attributes
-        try:
-            filtered_matches = np.setdiff1d(possible_matches[possible_matches[0]==attribute][1].values, exact_matches)
-        except:
-            filtered_matches = np.empty(0)
-        if (filtered_matches.size)>0:
-            possible_match_count += 1
-            #print attribute in new study along with datatype and patient/sample attribute
-            print "================================================"
-            print "new study attribute: " + attribute
-            print '---------------------------------------'
-            
-            #print similar attributes found in existing studies along with the datatype
-            print 'possible matches:'
-
-            for matching_attribute in filtered_matches:
-                print matching_attribute + ", which is present in " + str(int(study_data_combined.sum()[matching_attribute])) + " other studies"
-                attribute_dtypes=[]
-                attribute_ps_types=[]
-
-        else:
-            no_matches.append(attribute)
-
-    if possible_match_count == 0:
-        print "No similar matches detected."
-    ############################################################3
-    print ""
-    print "================================================" 
-    print "attributes with NO matches:"
-    print "================================================"
-
-    for attribute in no_matches:
-        print attribute
         
 def plot_attribute_distribution(cBioPortal_data, new_study_data):
     plt.rcParams['figure.figsize'] = (10.0, 8.0)
@@ -378,7 +324,7 @@ def get_unique_attributes(unique_attributes, value_matches):
             no_matches.append(attribute)
     return no_matches
 
-def generate_latex_report(match_table,):
+def generate_latex_report(match_table, predicted_types, study_name):
     from pylatex import NoEscape, Document, Section, Subsection, Tabular, Math, TikZ, Axis, Plot, Figure, Matrix, Alignat
     from pylatex.utils import italic
     import os
@@ -389,9 +335,18 @@ def generate_latex_report(match_table,):
     doc = Document(geometry_options=geometry_options)
 
     with doc.create(Section('cBioPortal new study report')):
-        doc.append('This is an example report')
+        doc.append('Report for study: ' + study_name)
 
         with doc.create(Subsection('Attribute matches')):
+            doc.append('  Below are the possible matches between attributes from existing data on the cBioPortal and the new study.')
+            doc.append('  The metric used to detect each match is denoted by the symbols follwing the attribute name of the match.')
+            doc.append('  Additionally, the number of studies in which the matching attribute occurs is given to indicate how popular the attribute is among existing studies.')
+            if predicted_types != None:
+                doc.append('  In the second table, predictions are given as to whether an attribute is a patient or sample attribute.')
+                doc.append('  The sample/patient prediction is based on what is most common for that particular attribute in the existing cBioPortal studies.')
+            doc.append(NoEscape(r'\\'))
+            doc.append(NoEscape(r'\\'))
+
             with doc.create(Tabular('|c|c|')) as table:
                 table.add_hline()
                 table.add_row(list(match_table))
@@ -401,26 +356,80 @@ def generate_latex_report(match_table,):
                 for row in match_table.index:
                     table.add_row(list(match_table.loc[row,:]))
                     table.add_hline()
+        doc.append(NoEscape(r'\string^ represents matches found based on the attribute names\\'))
+        doc.append(NoEscape(r'\string* represents matches found based on clustering of the attribute values\\'))
+
+        if predicted_types is not None:
+            with doc.create(Subsection('Matching attribute types')):
+                with doc.create(Tabular('|c|c|')) as table:
+                    table.add_hline()
+                    table.add_row(list(predicted_types))
+                    table.add_hline()
+                    table.add_hline()
+
+                    for row in predicted_types.index:
+                        table.add_row(list(predicted_types.loc[row,:]))
+                        table.add_hline()
 
         doc.append(NoEscape(r'\newpage'))
 
         with doc.create(Subsection('Number of attribute distributions')):
             with doc.create(Figure(position='h!')) as n_attributes:
                 n_attributes.add_image(file_directory + 'n_attribute_distribution.png', width=NoEscape(r'0.99\textwidth'))
-                n_attributes.add_caption('Number of attributes')
+                n_attributes.add_caption('Comparison between the number of attributes in the new study and the number of attributes in each existing study on cBioPortal.  The dashed black line indicates the number of attributes in the new study, while the histogram shows the data for existing cBioPortal studies.')
 
         #with doc.create(Subsection('Number of unique attributes')):
             with doc.create(Figure(position='h!')) as n_unique_attributes:
                 n_unique_attributes.add_image(file_directory + 'n_unique_attribute_distribution.png', width=NoEscape(r'0.99\textwidth'))
-                n_unique_attributes.add_caption('Number of unique attributes')
+                n_unique_attributes.add_caption('Comparison between the number of unique attributes in the new study and the number of unique attributes in each existing study on cBioPortal.  The dashed black line indicates the number of unqiue attributes in the new study, while the histogram shows the data for existing cBioPortal studies.')
 
         #with doc.create(Subsection('Number of common attributes')):
             with doc.create(Figure(position='h!')) as n_common_attributes:
                 n_common_attributes.add_image(file_directory + 'n_common_attribute_distribution.png', width=NoEscape(r'0.99\textwidth'))
-                n_common_attributes.add_caption('Number of common attributes')
+                n_common_attributes.add_caption('Comparison between the number of common attributes in the new study and the number of common attributes in each existing study on cBioPortal.  The dashed black line indicates the number of common attributes in the new study, while the histogram shows the data for existing cBioPortal studies.')
 
     doc.generate_pdf('report', clean_tex=True)
 
+def combine_matches(exact, name, value, no_matches):   
+    all_matches = (pd.concat([exact, value, name, no_matches])
+                      .drop_duplicates()
+                      .sort_values('New study attribute',axis=0)
+                      .reset_index(drop=True))
+    
+    for index, row in all_matches.iterrows():
+        append_string = ''
+        if (sum(exact['Possible matches'] == row['Possible matches']) > 0) or (sum(name['Possible matches'] == row['Possible matches']) > 0):
+            append_string += '^'
+        if sum(value['Possible matches'] == row['Possible matches']) > 0:
+            append_string += '*'
+        else:
+            append_string += ''
+
+        if row['Possible matches'] != 'No matches found':            
+            all_matches['Possible matches'][index] = all_matches['Possible matches'][index] + append_string + " (found in " + str(int(study_data_combined.sum()[row['Possible matches']])) + " other studies)"
+
+    return all_matches
+
+def attribute_type_prediction(exact_matches, name_matches, value_matches, studies):
+    sample_or_patient = {True:"Patient", False:"Sample"}
+    match_type_table = []
+    only_matches = (pd.concat([exact_matches, value_matches, name_matches])
+                      .drop_duplicates()
+                      .sort_values('New study attribute',axis=0)
+                      .reset_index(drop=True))
+    
+    for matching_attribute in only_matches['Possible matches'].values:
+        studies_with_attribute=study_data_combined[study_data_combined[matching_attribute]>0].index    
+        attribute_ps_types=[]
+        for study in studies_with_attribute:
+            study_index=study_names.index(study)
+
+            attribute_data=studies[study_index][1]
+            attribute_ps_type=attribute_data[attribute_data['clinicalAttributeId']==matching_attribute]['patientAttribute']
+            attribute_ps_types.append(sample_or_patient[attribute_ps_type.get_values()[0]])
+
+        match_type_table.append((matching_attribute, max(Counter(attribute_ps_types))))
+    return pd.DataFrame(match_type_table, columns=["Matching Atrribute","Patient or Sample prediction"])
 
 #values that should be read in
 # Parse arguments
@@ -527,17 +536,23 @@ value_matches_df = pd.DataFrame(processed_value_matches, columns=['New study att
 no_name_or_value_matches = get_unique_attributes(no_name_matches, value_matches_df)
 no_matches_df = pd.DataFrame(np.asarray(([no_name_or_value_matches, ['No matches found']*len(no_name_or_value_matches)])).T,
                              columns=['New study attribute', 'Possible matches'])
-all_matches_df = (pd.concat([exact_matches_df, value_matches_df, no_matches_df])
-                  .drop_duplicates()
-                  .sort_values('New study attribute',axis=0)
-                  .reset_index(drop=True))
+all_matches_df = combine_matches(exact_matches_df, name_matches_df, value_matches_df, no_matches_df)
 
+predicted_attribute_types=None
+if api_flag:
+    predicted_attribute_types = attribute_type_prediction(exact_matches_df, name_matches_df, value_matches_df, studies)
+
+if new_study_path != None:
+    test_study = new_study_path
 #print all_matches_df
 if latex_flag:
-    generate_latex_report(all_matches_df)
+    generate_latex_report(all_matches_df, predicted_attribute_types, test_study)
 else:
+    print "report for study: " + test_study
     print all_matches_df
-
+    print '^ represents matches found based on the attribute names'
+    print '* represents matches found based on clustering of the attribute values'
+    print predicted_attribute_types
 
 #make and save figures
 plot_attribute_distribution(study_data_combined, test_study_attribute_names)
