@@ -341,9 +341,9 @@ def generate_latex_report(match_table, predicted_types, study_name):
             doc.append('  Below are the possible matches between attributes from existing data on the cBioPortal and the new study.')
             doc.append('  The metric used to detect each match is denoted by the symbols follwing the attribute name of the match.')
             doc.append('  Additionally, the number of studies in which the matching attribute occurs is given to indicate how popular the attribute is among existing studies.')
-            if predicted_types != None:
-                doc.append('  In the second table, predictions are given as to whether an attribute is a patient or sample attribute.')
-                doc.append('  The sample/patient prediction is based on what is most common for that particular attribute in the existing cBioPortal studies.')
+            #if predicted_types != None:
+            doc.append('  In the second table, predictions are given as to whether an attribute is a patient or sample attribute.')
+            doc.append('  The sample/patient prediction is based on what is most common for that particular attribute in the existing cBioPortal studies.')
             doc.append(NoEscape(r'\\'))
             doc.append(NoEscape(r'\\'))
 
@@ -359,17 +359,17 @@ def generate_latex_report(match_table, predicted_types, study_name):
         doc.append(NoEscape(r'\string^ represents matches found based on the attribute names\\'))
         doc.append(NoEscape(r'\string* represents matches found based on clustering of the attribute values\\'))
 
-        if predicted_types is not None:
-            with doc.create(Subsection('Matching attribute types')):
-                with doc.create(Tabular('|c|c|')) as table:
-                    table.add_hline()
-                    table.add_row(list(predicted_types))
-                    table.add_hline()
-                    table.add_hline()
+        #if predicted_types is not None:
+        with doc.create(Subsection('Matching attribute types')):
+            with doc.create(Tabular('|c|c|')) as table:
+                table.add_hline()
+                table.add_row(list(predicted_types))
+                table.add_hline()
+                table.add_hline()
 
-                    for row in predicted_types.index:
-                        table.add_row(list(predicted_types.loc[row,:]))
-                        table.add_hline()
+                for row in predicted_types.index:
+                    table.add_row(list(predicted_types.loc[row,:]))
+                    table.add_hline()
 
         doc.append(NoEscape(r'\newpage'))
 

@@ -12,7 +12,7 @@ This tool is designed to aid in curating new study clinical data into cBioPortal
  * Pylatex (required only for the '--output_pdf' option)
 
 ### Running the script
-The default mode of the script selects a random study from the portal and searches other studies on the portal for matching attributes.  The current version of the script typically takes a few minutes to run and depends on internet access to download data from cBioPortal.  Alternatively, one can also clone the datahub repository and run the tool on that local data.
+The default mode of the script selects a random study from the portal and searches other studies on the portal for matching attributes.  The current version of the script typically takes around 10 minutes to run and depends on internet access to download data from cBioPortal.  Alternatively, one can also clone the datahub repository and run the tool on that local data.
 
 Default example:
 ```bash
