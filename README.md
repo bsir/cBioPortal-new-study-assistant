@@ -5,7 +5,7 @@ This tool is designed to aid in curating new study clinical data into cBioPortal
 
 ### Required python packages
  * NumPy
- * SciPy
+ * SciPy (recent version required)
  * pandas
  * seaborn
  * python-levenshtein: [anaconda link](https://anaconda.org/conda-forge/python-levenshtein)

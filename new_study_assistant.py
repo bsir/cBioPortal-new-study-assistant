@@ -220,6 +220,9 @@ def process_new_study_data(new_study_data):
 def get_clusters(attribute_value_data):
     data_link = scipy.cluster.hierarchy.linkage(attribute_value_data, method='complete', metric='cosine') # computing the linkage
     thresh = 0.7*max(data_link[:,2])
+    print data_link
+    np.clip(data_link,0,np.max(data_link),data_link)
+    print data_link
     clusters = fcluster(data_link, thresh, 'distance')
     clustered_attributes=[]
 
