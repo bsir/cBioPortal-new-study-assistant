@@ -1,7 +1,7 @@
 ## cBioPortal-new-study-assistant
 
 ### Introduction
-	This tool is designed to aid in curating new study clinical data into cBioPortal.  The tool reads clinical data from the new study and compares the data to existing studies in the cBioPortal database to find attributes which match those in existing studies.  The ultimate goal of the tool is to aid the curator in normalizing the new study data relative to cBioPortal studies.
+This tool is designed to aid in curating new study clinical data into cBioPortal.  The tool reads clinical data from the new study and compares the data to existing studies in the cBioPortal database to find attributes which match those in existing studies.  The ultimate goal of the tool is to aid the curator in normalizing the new study data relative to cBioPortal studies.
 
 ### Required python packages
  * NumPy
