@@ -220,9 +220,7 @@ def process_new_study_data(new_study_data):
 def get_clusters(attribute_value_data):
     data_link = scipy.cluster.hierarchy.linkage(attribute_value_data, method='complete', metric='cosine') # computing the linkage
     thresh = 0.7*max(data_link[:,2])
-    print data_link
     np.clip(data_link,0,np.max(data_link),data_link)
-    print data_link
     clusters = fcluster(data_link, thresh, 'distance')
     clustered_attributes=[]
 
@@ -361,6 +359,7 @@ def generate_latex_report(match_table, predicted_types, study_name):
                     table.add_hline()
         doc.append(NoEscape(r'\string^ represents matches found based on the attribute names\\'))
         doc.append(NoEscape(r'\string* represents matches found based on clustering of the attribute values\\'))
+        doc.append(NoEscape(r'NOTE: PATIENT_ID and SAMPLE_ID are omitted as they should be present in every study.\\'))
 
         if predicted_types is not None:
             with doc.create(Subsection('Matching attribute types')):
@@ -434,8 +433,66 @@ def attribute_type_prediction(exact_matches, name_matches, value_matches, studie
         match_type_table.append((matching_attribute, max(Counter(attribute_ps_types))))
     return pd.DataFrame(match_type_table, columns=["Matching Atrribute","Patient or Sample prediction"])
 
+def generate_html_report(match_table, predicted_types, study_name):
+    #open file to write
+    f = open('report.html', 'w')
+    #f.write('<center>')
+    f.write('<center><font size=\"6\">cBioPortal new study report</font></center> <br>\n')
+    f.write('Report for study: ' + study_name + "</font></center><br>\n")
+
+    f.write('<center><font size=\"5\">Attribute matches</font></center><br>\n')
+
+    f.write('Below are the possible matches between attributes from existing data on the cBioPortal and the new study.\n')
+    f.write('  The metric used to detect each match is denoted by the symbols follwing the attribute name of the match.\n')
+    f.write('  Additionally, the number of studies in which the matching attribute occurs is given to indicate how popular the attribute is among existing studies.\n')
+    f.write('<br>\n')
+    f.write('<br>\n')
+
+    f.write(match_table.to_html(index=False))
+
+    f.write('^ represents matches found based on the attribute names<br>')
+    f.write('* represents matches found based on clustering of the attribute values<br>')
+    f.write('NOTE: PATIENT_ID and SAMPLE_ID are omitted as they should be present in every study.')
+    f.write('<br>\n')
+    f.write('<br>\n')
+
+    if predicted_types is not None:
+        f.write('<center><font size=\"5\">Matching attribute types </font></center><br>\n')
+        f.write('Predictions are given as to whether an attribute is a patient or sample attribute.\n')
+        f.write('  The sample/patient prediction is based on what is most common for that particular attribute in the existing cBioPortal studies.\n')
+        f.write('<br>\n')
+        f.write(predicted_types.to_html(index=False)) 
+        f.write('<br>\n')    
+
+    #with doc.create(Subsection('Number of attributes distribution\n')):
+    f.write('<div class="image" style="display:table;">')
+    f.write('<img src=\"' + file_directory + 'n_attribute_distribution.png\"' + 'alt=\"number of attributes\" width=\"800\">')
+    f.write('<br>\n')
+    f.write('<div style="display:table-caption;caption-side:bottom;">Comparison between the number of attributes in the new study and the number of attributes in each existing study on cBioPortal.  The dashed black line indicates the number of attributes in the new study, while the histogram shows the data for existing cBioPortal studies.</div>\n')
+    f.write('</div>\n')
+
+    f.write('<br>')
+
+    f.write('<div class="image" style="display:table;">')
+    f.write('<img src=\"' + file_directory + 'n_unique_attribute_distribution.png\"' + 'alt=\"number of unique attributes\" width=\"800\">')
+    f.write('<br>\n')
+    f.write('<div style="display:table-caption;caption-side:bottom;">Comparison between the number of unique attributes in the new study and the number of unique attributes in each existing study on cBioPortal.  The dashed black line indicates the number of unqiue attributes in the new study, while the histogram shows the data for existing cBioPortal studies.</div>\n')
+    f.write('</div>\n')
+
+    f.write('<br>')
+
+    f.write('<div class="image" style="display:table;">')
+    f.write('<img src=\"' + file_directory + 'n_common_attribute_distribution.png\"' + 'alt=\"number of common attributes\" width=\"800\">')
+    f.write('<br>\n')
+    f.write('<div style="display:table-caption;caption-side:bottom;">Comparison between the number of common attributes in the new study and the number of common attributes in each existing study on cBioPortal.  The dashed black line indicates the number of common attributes in the new study, while the histogram shows the data for existing cBioPortal studies.</div>\n')
+    f.write('</div>\n')
+
+    f.close()
+
 #values that should be read in
 # Parse arguments
+file_directory=''
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--new_study_path", help="path to new study data")
 parser.add_argument("--study_to_drop", help="if study being tested is already on cBioPortal it may be helpful to drop that study from the analysis")
@@ -500,6 +557,7 @@ if random_study or specific_study is not None:
 
 #otherwise read in data from a new study
 else:
+    print "Study being analyzed: " + new_study_path
     new_study_data = pd.read_table(new_study_path)
     test_study_attribute_names = get_new_study_attributes(new_study_data)
     if study_to_drop is not None:
@@ -550,13 +608,16 @@ if new_study_path != None:
 #print all_matches_df
 if latex_flag:
     generate_latex_report(all_matches_df, predicted_attribute_types, test_study)
+    print "Results written to report.pdf"
 else:
-    print "report for study: " + test_study
-    print all_matches_df
-    print '^ represents matches found based on the attribute names'
-    print '* represents matches found based on clustering of the attribute values'
-    if predicted_attribute_types is not None:
-        print predicted_attribute_types
+    generate_html_report(all_matches_df, predicted_attribute_types, test_study)
+    print "Results written to report.html"
+    #print "report for study: " + test_study
+    #print all_matches_df
+    #print '^ represents matches found based on the attribute names'
+    #print '* represents matches found based on clustering of the attribute values'
+    #if predicted_attribute_types is not None:
+    #    print predicted_attribute_types
 
 #make and save figures
 plot_attribute_distribution(study_data_combined, test_study_attribute_names)

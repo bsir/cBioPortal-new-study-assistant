@@ -45,7 +45,7 @@ python new_study_assistant.py --study_to_drop='acyc_mda_2015' --new_study_path='
 ```bash
 --output_pdf
 ```
- * Activate this flag if you would like the report results printed to a pdf (requires Pylatex)
+ * Activate this flag if you would like the report results printed to a pdf instead of in an HTML format (requires Pylatex)
 
 ```bash
 --datahub_path PATH
@@ -57,6 +57,7 @@ python new_study_assistant.py --study_to_drop='acyc_mda_2015' --new_study_path='
 Similar attributes that are detected in the test study are printed to the screen.  The prefix "NEW_STUDY_" is added to each attribute in the test study to distinguish those attributes from those already on cBioPortal.  The text output from the script can be redirected to a file by using "> FILENAME" at the end of the python command.
 
 Running the script also results in several image files:
+ * report.html - HTML file containing an output report containing the attribute matches and several figures.
  * dendrogram.png - An image showing the dendrogram obtained for similarity detection based on attribute values.
  * n_attribute_distribution.png - An image showing the number of attributes contained in the test study relative to all studies on the cBioPortal.
  * n_common_attribute_distribution.png - An image showing the number of attributes in common with studies on the cBioPortal.
